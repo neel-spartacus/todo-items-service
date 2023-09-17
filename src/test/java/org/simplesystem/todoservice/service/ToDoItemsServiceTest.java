@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -216,5 +218,35 @@ public class ToDoItemsServiceTest {
     // Then
     assertTrue(allItems.size() == 2);
     assertTrue(itemsWithNotDone.size() == 1);
+  }
+
+  @Test
+  public void testUpdateStatusForPastDueItems() {
+
+    // Given
+    Instant now = Instant.now();
+    Item item1 =
+        Item.builder()
+            .id(1L)
+            .status(Status.NOT_DONE)
+            .description("Item-1")
+            .dueDate(now.minus(Duration.ofDays(1)))
+            .build();
+    Item item2 =
+        Item.builder()
+            .id(1L)
+            .status(Status.NOT_DONE)
+            .description("Item-2")
+            .dueDate(now.plus(Duration.ofDays(1)))
+            .build();
+    Mockito.when(repository.findByStatusAndDueDateBefore(any(Status.class), any(Instant.class)))
+        .thenReturn(Arrays.asList(item1));
+
+    // When
+    toDoItemsService.updateStatusForPastDueItems();
+
+    // Then
+    Mockito.verify(repository, Mockito.times(1)).save(item1);
+    Mockito.verify(repository, Mockito.times(0)).save(item2);
   }
 }

@@ -5,11 +5,6 @@ import org.simplesystem.todoservice.dto.ItemDto;
 import org.simplesystem.todoservice.model.Item;
 
 public class DtoEntityUtils {
-
-  public static Item convertDtoToEntity(ItemDto itemDto, ModelMapper modelMapper) {
-    return modelMapper.map(itemDto, Item.class);
-  }
-
   public static ItemDto convertEntityToDto(Item item, ModelMapper modelMapper) {
     return modelMapper.map(item, ItemDto.class);
   }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.EnumUtils;
 import org.modelmapper.ModelMapper;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
+@Transactional
 public class ToDoItemsService {
 
   private ModelMapper modelMapper;
@@ -67,6 +69,10 @@ public class ToDoItemsService {
             .findById(itemId)
             .orElseThrow(() -> new ResourceNotFoundException("Item not found with ID: " + itemId));
 
+    if (Objects.equals(item.getStatus(), Status.PAST_DUE)) {
+      throw new ValidationException("Item with status as past due cannot be updated");
+    }
+
     item.setDescription(description);
     return convertEntityToDto(repository.save(item), modelMapper);
   }
@@ -77,10 +83,11 @@ public class ToDoItemsService {
         repository
             .findById(itemId)
             .orElseThrow(() -> new ResourceNotFoundException("Item not found with ID: " + itemId));
-
+    if (Objects.equals(item.getStatus(), Status.PAST_DUE)) {
+      throw new ValidationException("Item with status as past due cannot be updated");
+    }
     if (EnumUtils.isValidEnum(Status.class, status)
-        && !Objects.equals(status, Status.PAST_DUE.name())
-        && !Objects.equals(item.getStatus().name(), Status.PAST_DUE.name())) {
+        && !Objects.equals(status, Status.PAST_DUE.name())) {
       item.setStatus(Status.valueOf(status));
       item.setCompletionDate(Instant.now(Clock.systemUTC()));
     } else {
