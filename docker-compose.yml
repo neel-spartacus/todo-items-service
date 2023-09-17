@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  your-app:
+    build: .
+    image: todoitems-service-image
+    container_name: todoitems-service-container
+    ports:
+      - "8080:8080"
+    restart: always
