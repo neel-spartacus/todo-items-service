@@ -2,8 +2,10 @@ package org.simplesystem.todoservice.exceptionhandler;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import org.hibernate.StaleStateException;
 import org.simplesystem.todoservice.exceptions.ResourceNotFoundException;
 import org.simplesystem.todoservice.exceptions.ValidationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -30,5 +32,15 @@ public class GlobalExceptionHandler {
         LocalDateTime.now(Clock.systemUTC()),
         ex.getMessage(),
         "Invalid input data");
+  }
+
+  @ExceptionHandler(value = {OptimisticLockingFailureException.class, StaleStateException.class})
+  @ResponseStatus(value = HttpStatus.CONFLICT)
+  public ErrorMessage optimisticLockingFailureException(Exception ex) {
+    return new ErrorMessage(
+        HttpStatus.CONFLICT.value(),
+        LocalDateTime.now(Clock.systemUTC()),
+        ex.getMessage(),
+        "Item already locked by another transaction");
   }
 }

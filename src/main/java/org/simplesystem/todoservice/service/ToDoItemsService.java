@@ -4,6 +4,7 @@ import static org.simplesystem.todoservice.utils.DtoEntityUtils.*;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,6 +21,8 @@ import org.simplesystem.todoservice.model.Item;
 import org.simplesystem.todoservice.repository.ItemRepository;
 import org.simplesystem.todoservice.utils.DtoEntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -74,11 +77,15 @@ public class ToDoItemsService {
     }
 
     item.setDescription(description);
-    return convertEntityToDto(repository.save(item), modelMapper);
+    try {
+      return convertEntityToDto(repository.save(item), modelMapper);
+    } catch (ObjectOptimisticLockingFailureException ex) {
+      throw new OptimisticLockingFailureException(
+          "Item with: " + itemId + " is already locked by another transaction");
+    }
   }
 
-  public ItemDto updateItemStatus(long itemId, String status) {
-
+  public ItemDto updateItemStatus(long itemId, Status status) {
     Item item =
         repository
             .findById(itemId)
@@ -86,15 +93,23 @@ public class ToDoItemsService {
     if (Objects.equals(item.getStatus(), Status.PAST_DUE)) {
       throw new ValidationException("Item with status as past due cannot be updated");
     }
-    if (EnumUtils.isValidEnum(Status.class, status)
-        && !Objects.equals(status, Status.PAST_DUE.name())) {
-      item.setStatus(Status.valueOf(status));
-      item.setCompletionDate(Instant.now(Clock.systemUTC()));
+    if (EnumUtils.isValidEnum(Status.class, status.name())
+        && !Objects.equals(status, Status.PAST_DUE)) {
+      item.setStatus(status);
+      if (Objects.equals(item.getStatus(), Status.DONE)) {
+        item.setCompletionDate(Instant.now(Clock.systemUTC()));
+      }
+
     } else {
       throw new ValidationException(
           "Invalid status value is used to update Item with id : " + itemId);
     }
-    return convertEntityToDto(repository.save(item), modelMapper);
+    try {
+      return convertEntityToDto(repository.save(item), modelMapper);
+    } catch (ObjectOptimisticLockingFailureException ex) {
+      throw new OptimisticLockingFailureException(
+          "Item with: " + itemId + " is already locked by another transaction");
+    }
   }
 
   public List<ItemDto> getItems(boolean retrieveAll) {
@@ -112,11 +127,34 @@ public class ToDoItemsService {
 
   @Scheduled(fixedRate = 60000)
   public void updateStatusForPastDueItems() {
-    List<Item> items = repository.findByStatusAndDueDateBefore(Status.NOT_DONE, Instant.now());
-    items.forEach(
-        item -> {
+    List<Long> itemIds =
+        repository.findItemIdsByStatusAndDueDateBefore(Status.NOT_DONE, Instant.now());
+
+    List<Long> lockedItemsWithException = new ArrayList<>();
+    for (Long itemId : itemIds) {
+      try {
+        Optional<Item> optionalItem = repository.findById(itemId);
+        if (optionalItem.isPresent()) {
+          Item item = optionalItem.get();
           item.setStatus(Status.PAST_DUE);
           repository.save(item);
-        });
+        }
+      } catch (ObjectOptimisticLockingFailureException ex) {
+        log.error("Item with: " + itemId + " is already locked by another transaction");
+        lockedItemsWithException.add(itemId);
+      }
+    }
+    if (!lockedItemsWithException.isEmpty()) {
+      String exceptionIds =
+          lockedItemsWithException.stream()
+              .map(itemId -> itemId.toString())
+              .collect(Collectors.joining(","));
+      throw new OptimisticLockingFailureException(
+          "Item with ids: "
+              + " [ "
+              + exceptionIds
+              + " ] "
+              + " were not updated as they were locked by other transactions");
+    }
   }
 }

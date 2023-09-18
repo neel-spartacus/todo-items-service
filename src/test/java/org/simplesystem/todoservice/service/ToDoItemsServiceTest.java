@@ -234,13 +234,15 @@ public class ToDoItemsServiceTest {
             .build();
     Item item2 =
         Item.builder()
-            .id(1L)
+            .id(2L)
             .status(Status.NOT_DONE)
             .description("Item-2")
             .dueDate(now.plus(Duration.ofDays(1)))
             .build();
-    Mockito.when(repository.findByStatusAndDueDateBefore(any(Status.class), any(Instant.class)))
-        .thenReturn(Arrays.asList(item1));
+    Mockito.when(
+            repository.findItemIdsByStatusAndDueDateBefore(any(Status.class), any(Instant.class)))
+        .thenReturn(Arrays.asList(item1.getId()));
+    Mockito.when(repository.findById(any(Long.class))).thenReturn(Optional.of(item1));
 
     // When
     toDoItemsService.updateStatusForPastDueItems();

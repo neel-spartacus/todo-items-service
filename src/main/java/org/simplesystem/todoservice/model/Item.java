@@ -34,6 +34,8 @@ public class Item {
 
   private Instant completionDate;
 
+  @Version private Long version;
+
   @Override
   public String toString() {
     return "Item{" + "id=" + id + ", description='" + description + '\'' + '}';

@@ -68,7 +68,7 @@ public class ToDoItemsControllerTest {
         .andExpect(jsonPath("$.id").exists());
 
     String newDescription = "item-modified";
-    String newStatus = "DONE";
+    Status newStatus = Status.DONE;
 
     mockMvc
         .perform(
@@ -82,7 +82,7 @@ public class ToDoItemsControllerTest {
     mockMvc
         .perform(
             MockMvcRequestBuilders.patch("/items/{id}/status", 1)
-                .content(newStatus)
+                .param("status", String.valueOf(newStatus))
                 .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON))

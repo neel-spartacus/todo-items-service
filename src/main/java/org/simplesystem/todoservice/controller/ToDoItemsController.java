@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiOperation;
 import java.util.List;
 import javax.validation.Valid;
 import org.simplesystem.todoservice.dto.ItemDto;
+import org.simplesystem.todoservice.enums.Status;
 import org.simplesystem.todoservice.service.ToDoItemsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -33,7 +34,7 @@ public class ToDoItemsController {
   @PatchMapping("items/{id}/status")
   @ApiOperation(value = "Update the status of an item")
   ResponseEntity<ItemDto> updateItemStatus(
-      @PathVariable(name = "id") long itemId, @RequestBody @Valid String status) {
+      @PathVariable(name = "id") long itemId, @RequestParam("status") @Valid Status status) {
     ItemDto updatedItemDto = toDoItemsService.updateItemStatus(itemId, status);
     return ResponseEntity.status(HttpStatus.OK).body(updatedItemDto);
   }
